@@ -1,14 +1,15 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import List, Dict
 
 class User(BaseModel):
     username: str
     email: str 
 
-class Plan(BaseModel):
+class SubscriptionPlan(BaseModel):
     name: str
     description: str
-    permissions: list[str] 
-    limits: dict 
+    api_permissions: List[str]
+    usage_limits: Dict[str, int]
 
 class Permission(BaseModel):
     name: str
