@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Dict
+from datetime import datetime
+from typing import Optional
 
 class User(BaseModel):
     username: str
@@ -19,10 +21,12 @@ class Permission(BaseModel):
 class Subscription(BaseModel):
     user_id: str 
     plan_id: str
-    start_date: str
-    end_date: str
+    start_date: datetime
+    end_date: Optional[datetime] = None #Optional, default None if not set
 
 class Usage(BaseModel):
     user_id: str
     api_endpoint: str
-    timestamp: str
+    timestamp: Optional[datetime] = None #Optional; can be auto-populated
+    api_calls: int = Field(1, description="Number of API calls made") # Default to 1
+    storage_used: int = Field(0, description="Storage used in MB") # Default to 0
