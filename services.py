@@ -2,6 +2,7 @@ import asyncio
 from bson import ObjectId
 from fastapi import FastAPI, HTTPException, Path, Query
 from pymongo.errors import DuplicateKeyError
+from typing import Dict
 
 from models import (
     perm_collection,
@@ -92,6 +93,8 @@ async def get_user(user_id: str):
         return user #Return the user data
     else: #If the user is not found
         raise HTTPException(status_code=404, detail="User not found")
+    
+
 
 #Subscription handling
 
@@ -131,6 +134,7 @@ async def get_subscriptions(user_id: str):
 
 
 
+
 @app.post("/usage")
 async def collect_usage_data(usage: Usage):
     """Track API usage for a user."""
@@ -154,6 +158,7 @@ async def collect_usage_data(usage: Usage):
     # Insert into the usage collection
     result = await usage_collection.insert_one(usage_data)
     return {"message": "Usage tracked", "usage_id": str(result.inserted_id)}
+
 
 
 
@@ -214,6 +219,8 @@ async def get_usage_stats(user_id: str):
         }
 
         return usage_stats
+    
+
 
 
 @app.put("/subscriptions/{user_id}")
@@ -248,6 +255,9 @@ async def assign_modify_user_plan(user_id: str, plan_id: str):
         raise HTTPException(status_code=400, detail="Failed to update subscription")
 
     return {"message": "User subscription updated successfully", "subscription": updated_subscription}
+
+
+
 
 
 @app.get("/access/{user_id}/{api_endpoint}")
@@ -288,37 +298,191 @@ async def check_access(user_id: str, api_endpoint: str):
     return {"access": True, "message": "API access granted"}
 
 
-
-
-# Implement other service functions similarly
-# (e.g., create_user, get_user, create_subscription,
-# get_subscription, check_access, track_usage, etc.)
-
+#@app.post("/usage/{user_id}")
+#async def track_usage(user_id: str, api_endpoint: str, usage_limits: Dict[str, int]):
+#    """Track API usage for a user"""
+#    current_timestamp = datetime.now(timezone.utc).date()
+#    usage_record = await usage_collection.find_one(
+#        {"user_id": user_id, "api_endpoint": api_endpoint}
+#    )
+#    # api request has been made before
+#    if usage_record:
+#        subscription = await subscriptions_collection.find_one({"user_id": user_id})
+#        usage_limit = await sub_plan_collection.find_one({"usage_limits": usage_limits})
+#        subscription["limits"] = usage_limit
+#
+#        # Ensure " count " exists before comparing it to the subscription limit
+#        if "count" not in usage_record:
+#            usage_record["count"] = 0 # Initialize count if not present
+#
+#
+#        if usage_record["count"] >= subscription["limits"].get(api_endpoint, 0):
+#            raise HTTPException(
+#                status_code=429, detail="Usage limit exceeded for this API"
+#            )
+#
+#        # can update usage count
+#        await usage_collection.update_one(
+#            {"_id": usage_record["_id"]}, {"$inc": {"count": 1}}
+#        )
+#    else:
+#        # first api request: create a new usage record
+#        new_usage = Usage(
+#            user_id=user_id,
+#            api_endpoint=api_endpoint, 
+#            timestamp=str(current_timestamp),
+#        )
+#        await usage_collection.insert_one(new_usage.model_dump())
+#
+#    return {"message": "API usage has been tracked!!"}
 
 @app.post("/usage/{user_id}")
 async def track_usage(user_id: str, api_endpoint: str):
-    """Track API usage for a user"""
-    current_timestamp = datetime.utcnow().date()
-    usage_record = await usage_collection.find_one(
+
+     """Track API usage for a user"""
+     current_timestamp = datetime.now(timezone.utc).date()
+
+     usage_record = await usage_collection.find_one(
         {"user_id": user_id, "api_endpoint": api_endpoint}
     )
-    # api request has been made before
-    if usage_record:
+    
+    # API request has been made before
+     if usage_record:
         subscription = await subscriptions_collection.find_one({"user_id": user_id})
-        if usage_record["count"] >= subscription["limits"].get(api_endpoint, 0):
-            raise HTTPException(
-                status_code=429, detail="Usage limit exceeded for this API"
-            )
+        if not subscription:
+            raise HTTPException(status_code=404, detail="Subscription not found")
+        
+         # Get the usage limits from the subscription plan
+        plan = await sub_plan_collection.find_one({"_id": ObjectId(subscription["plan_id"])})
+        if not plan or "usage_limits" not in plan:
+            raise HTTPException(status_code=404, detail="No usage limits found for this plan")
+        
+        usage_limits = plan["usage_limits"]
+        if api_endpoint not in usage_limits:
+            raise HTTPException(status_code=403, detail="This API endpoint is not allowed under your subscription plan")
 
-        # can update usage count
+
+        # Ensure "count" exists before comparing it to the subscription limit
+        if "count" not in usage_record:
+            usage_record["count"] = 0  # Initialize count if not present
+
+        ## Check if usage exceeds the limit
+        #if usage_record["count"] >= subscription["limits"].get(api_endpoint, 0):
+        #    raise HTTPException(
+        #        status_code=429, detail="Usage limit exceeded for this API"
+        #    )
+        # Check if usage exceeds the limit
+        if usage_limits[api_endpoint]["daily"] > 0 and usage_record["count"] >= usage_limits[api_endpoint]["daily"]:
+            raise HTTPException(status_code=429, detail="API daily limit exceeded")
+
+        # Update usage count
         await usage_collection.update_one(
-            {"_id": usage_record["id"]}, {"$inc": {"count": 1}}
+            {"_id": usage_record["_id"]}, {"$inc": {"count": 1}}
         )
-    else:
-        # first api request: create a new usage record
+     else:
+        # First API request: create a new usage record
         new_usage = Usage(
-            user_id=user_id, api_endpoint=api_endpoint, timestamp=str(current_timestamp)
+            user_id=user_id,
+            api_endpoint=api_endpoint,
+            timestamp=str(current_timestamp),
         )
-        await usage_collection.insert_one(new_usage.dict())
-    return {"message": "API usage has been tacked!!"}
+        await usage_collection.insert_one(new_usage.model_dump())
+
+     return {"message": "API usage has been tracked!"}
+
+
+
+
+#@app.get("/usage/{user_id}/limit")
+#async def check_usage_limit(user_id: str, api_endpoint: str):
+#    """Check the usage limit status for a user"""
+#    usage_record = await usage_collection.find_one(
+#        {"user_id": user_id, "api_endpoint": api_endpoint}
+#    )
+#    
+#    if not usage_record:
+#        raise HTTPException(
+#            status_code=404, detail="No usage record found for this API endpoint"
+#        )
+#    
+#    subscription = await subscriptions_collection.find_one({"user_id": user_id})
+#    if not subscription:
+#        raise HTTPException(
+#            status_code=404, detail="No subscription found for this user"
+#        )
+#
+#    usage_limit = await sub_plan_collection.find_one({"plan_id": subscription.get("plan_id")})
+#    if not usage_limit:
+#        raise HTTPException(
+#            status_code=404, detail="No usage limits found for this subscription"
+#        )
+#
+#    limit = usage_limit.get("usage_limits", {}).get(api_endpoint, 0)
+#    if limit == 0:
+#        raise HTTPException(
+#            status_code=404, detail="No usage limit defined for this API endpoint"
+#        ) 
+#    
+#    # Get the current count and the limit for the given api_endpoint
+#    current_count = usage_record.get("count", 0)
+#
+#    return {
+#        "user_id": user_id,
+#        "api_endpoint": api_endpoint,
+#        "current_usage": current_count,
+#        "limit": limit,
+#        "remaining_usage": max(limit - current_count, 0),
+#    }
+#
+
+@app.get("/usage/{user_id}/limit")
+async def check_usage_limit(user_id: str, api_endpoint: str):
+    """Check the usage limit status for a user"""
+    
+    # Check if the usage record exists for the user and API endpoint
+    usage_record = await usage_collection.find_one({"user_id": user_id, "api_endpoint": api_endpoint})
+    
+    if not usage_record:
+        raise HTTPException(
+            status_code=404, detail="No usage record found for this API endpoint"
+        )
+    
+    # Check if the subscription exists for the user
+    subscription = await subscriptions_collection.find_one({"user_id": user_id})
+    if not subscription:
+        raise HTTPException(
+            status_code=404, detail="No subscription found for this user"
+        )
+
+    # Fetch the usage limit based on the user's subscription plan
+    usage_limit = await sub_plan_collection.find_one({"plan_id": subscription.get("plan_id")})
+    if not usage_limit:
+        raise HTTPException(
+            status_code=404, detail="No usage limits found for this subscription"
+        )
+    
+    # Ensure usage_limits is a dictionary and contains the api_endpoint
+    usage_limits = usage_limit.get("usage_limits", {})
+    if not isinstance(usage_limits, dict):
+        raise HTTPException(
+            status_code=500, detail="Invalid structure of usage limits in the subscription plan"
+        )
+
+    limit = usage_limits.get(api_endpoint, None)
+    if limit is None:
+        raise HTTPException(
+            status_code=404, detail="No usage limit defined for this API endpoint"
+        )
+
+    # Get the current count for the api_endpoint usage
+    current_count = usage_record.get("count", 0)
+
+    return {
+        "user_id": user_id,
+        "api_endpoint": api_endpoint,
+        "current_usage": current_count,
+        "limit": limit,
+        "remaining_usage": max(limit - current_count, 0),
+    }
+
 
