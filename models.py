@@ -1,8 +1,5 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 
-#client = MongoClient(MONGO_URI)
-#db = client["cloud_access"]
-
 #Database configurations
 mongo_client = AsyncIOMotorClient("mongodb://localhost:27017")
 db = mongo_client["my_database"]

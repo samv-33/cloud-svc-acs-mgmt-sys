@@ -28,5 +28,19 @@ Activate the virtual environment:
 
 venv\Scripts\activate
 
+# Instructions to setup Database with MongoDB Compass
+Download latest version of MongoDB Compass or MongoDB shell from the official website
+
+Create a new Connection, and name it anything you like:
+
+I named mines "cloud_access_management"
+
+Create a Database, we used "my_database" for the name. I would recommend using this name
+to be consistent with the configurations on our models.py file
+
+Also create each collection accordingly to our collection names in models.py for efficiency
+So like (users_collection, )
+
+
 
 

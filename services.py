@@ -222,7 +222,6 @@ async def get_usage_stats(user_id: str):
     
 
 
-
 @app.put("/subscriptions/{user_id}")
 async def assign_modify_user_plan(user_id: str, plan_id: str):
     # Validate the plan ID
@@ -255,7 +254,6 @@ async def assign_modify_user_plan(user_id: str, plan_id: str):
         raise HTTPException(status_code=400, detail="Failed to update subscription")
 
     return {"message": "User subscription updated successfully", "subscription": updated_subscription}
-
 
 
 
