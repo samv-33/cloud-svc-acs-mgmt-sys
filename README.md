@@ -28,6 +28,10 @@ Activate the virtual environment:
 
 venv\Scripts\activate
 
+# Install all dependencies by doing:
+
+pip install -r requirements.txt
+
 # Instructions to setup Database with MongoDB Compass
 Download latest version of MongoDB Compass or MongoDB shell from the official website
 

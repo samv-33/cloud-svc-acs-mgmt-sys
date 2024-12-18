@@ -1,7 +1,16 @@
 from motor.motor_asyncio import AsyncIOMotorClient
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from the .env file
+load_dotenv()
+
+# Fetch configurations from environment variables
+mongo_uri = os.getenv("MONGO_URI")
+database_name = os.getenv("DATABASE_NAME")
 
 #Database configurations
-mongo_client = AsyncIOMotorClient("mongodb://localhost:27017")
+mongo_client = AsyncIOMotorClient(mongo_uri)
 db = mongo_client["my_database"]
 
 # Define collections 
