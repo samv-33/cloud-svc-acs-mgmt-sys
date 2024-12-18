@@ -18,12 +18,13 @@ app = FastAPI(title="Cloud Service Access Management System")
 
 
 # Routes: Subscription Plan Management
+#Create Subscription Plan
 @app.post("/plans")
 async def create_plan(plan: SubscriptionPlan):
     result = await sub_plan_collection.insert_one(plan.model_dump())
     return {"message": "Plan created", "plan_id": str(result.inserted_id)}
 
-
+#Modify subscription plan
 @app.put("/plans/{plan_id}")
 async def update_plan(plan_id: str, updates: dict):
     result = await sub_plan_collection.update_one(
@@ -33,7 +34,7 @@ async def update_plan(plan_id: str, updates: dict):
         raise HTTPException(status_code=404, detail="No updates made")
     return {"message": "Plan updated"}
 
-
+#Delete Subscription plan
 @app.delete("/plans/{plan_id}")
 async def delete_plan(plan_id: str):
     result = await sub_plan_collection.delete_one({"_id": ObjectId(plan_id)})
@@ -43,12 +44,13 @@ async def delete_plan(plan_id: str):
 
 
 # Routes: Permissions
+#Create permissions
 @app.post("/permissions")
 async def add_permissions(permission: Permission):
     result = await perm_collection.insert_one(permission.model_dump())
     return {"message": "Permission created", "permission_id": str(result.inserted_id)}
 
-
+#Modify permissions
 @app.put("/permissions/{permission_id}")
 async def update_permissions(permission_id: str, updates: dict):
     result = await perm_collection.update_one(
@@ -60,7 +62,7 @@ async def update_permissions(permission_id: str, updates: dict):
         )
     return {"message": "Permission updated"}
 
-
+#Delete permissions
 @app.delete("/permissions/{permission_id}")
 async def delete_permission(permission_id: str):
     result = await perm_collection.delete_one({"_id": ObjectId(permission_id)})
@@ -68,7 +70,7 @@ async def delete_permission(permission_id: str):
         raise HTTPException(status_code=404, detail="Permission not found")
     return {"message": "Permission deleted"}
 
-
+#Root page
 @app.get("/")
 async def root_page():
     return {"message": "Cloud Service Management System"}
@@ -76,14 +78,14 @@ async def root_page():
 
 # User Subscription Handling Route
 
-
+#Create a new user
 @app.post("/users")
 async def create_user(user: User):
     """Creates a new user."""
     result = await users_collection.insert_one(user.model_dump())
     return {"message": "New user created!", "user_id": str(result.inserted_id)}
 
-
+#Get user info
 @app.get("/users/{user_id}")
 async def get_user(user_id: str):
     """Retrieves a user by ID."""
@@ -98,6 +100,7 @@ async def get_user(user_id: str):
 
 #Subscription handling
 
+#Create Subscription plan
 @app.post("/subscriptions")
 async def create_subscriptions(subscription: Subscription):
 
@@ -123,7 +126,7 @@ async def create_subscriptions(subscription: Subscription):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-
+#Get subscriptions for user
 @app.get("/subscriptions/{user_id}")
 async def get_subscriptions(user_id: str): 
     subscription = await subscriptions_collection.find_one({"user_id": user_id})
@@ -134,7 +137,7 @@ async def get_subscriptions(user_id: str):
 
 
 
-
+#track usage data
 @app.post("/usage")
 async def collect_usage_data(usage: Usage):
     """Track API usage for a user."""
@@ -161,7 +164,7 @@ async def collect_usage_data(usage: Usage):
 
 
 
-
+#Get usage states for a user
 @app.get("/subscriptions/{user_id}/usage")
 async def get_usage_stats(user_id: str):
     
@@ -221,7 +224,7 @@ async def get_usage_stats(user_id: str):
         return usage_stats
     
 
-
+#Modify or assign plan to a user
 @app.put("/subscriptions/{user_id}")
 async def assign_modify_user_plan(user_id: str, plan_id: str):
     # Validate the plan ID
@@ -256,8 +259,7 @@ async def assign_modify_user_plan(user_id: str, plan_id: str):
     return {"message": "User subscription updated successfully", "subscription": updated_subscription}
 
 
-
-
+# Check if user has access to the api endpoint
 @app.get("/access/{user_id}/{api_endpoint}")
 async def check_access(user_id: str, api_endpoint: str):
     # Retrieve the user's subscription from the database
