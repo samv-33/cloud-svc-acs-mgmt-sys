@@ -7,7 +7,6 @@ load_dotenv()
 
 # Fetch configurations from environment variables
 mongo_uri = os.getenv("MONGO_URI")
-database_name = os.getenv("DATABASE_NAME")
 
 #Database configurations
 mongo_client = AsyncIOMotorClient(mongo_uri)
