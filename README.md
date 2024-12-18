@@ -17,7 +17,7 @@ https://drive.google.com/file/d/19Y1pZBiXxjLTN6x8la5cih-FeP-OUcO8/view?usp=shari
 
 Instructions how to run the program:
 Prerequisites Python 3.7+ - Download from Python's official website.
-MongoDB Compass -
+MongoDB Compass, MongoDB Shell, or Atlas could be used. 
 
 pip - Should come installed with Python; if not, install it using:
 
